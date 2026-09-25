@@ -1,6 +1,13 @@
 pipeline {
     agent any
 
+    triggers {
+        // Jenkins runs on localhost, so a real GitHub webhook can't reach it without
+        // a public tunnel. Polling is the practical local equivalent: check GitHub
+        // every 2 minutes and auto-build on new commits to main.
+        pollSCM('H/2 * * * *')
+    }
+
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
         IMAGE = "${DOCKERHUB_CREDENTIALS_USR}/devops-pipeline-app"

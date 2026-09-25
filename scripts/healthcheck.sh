@@ -1,5 +1,5 @@
 #!/bin/bash
-URL="http://localhost:5000/health"
+URL="${HEALTHCHECK_URL:-http://localhost:5000/health}"
 RETRIES=5
 DELAY=5
 

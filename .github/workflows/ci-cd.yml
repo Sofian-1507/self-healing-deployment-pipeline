@@ -1,0 +1,66 @@
+name: CI-CD Pipeline
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r app/requirements.txt
+          pip install pytest
+
+      - name: Run tests
+        run: pytest tests/
+
+  build-and-push-image:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push image
+        run: |
+          IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/devops-pipeline-app
+          docker build -t $IMAGE:${{ github.sha }} -t $IMAGE:latest .
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest
+
+  deploy:
+    needs: build-and-push-image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # No deployment server is configured for this project, so "deploy" runs
+      # directly on the GitHub Actions runner using the same scripts that would
+      # target a real host over SSH. Point this job at a remote server later by
+      # reverting to an ssh-action step that calls the same scripts/deploy.sh.
+      - name: Deploy and health-check with rollback
+        run: |
+          chmod +x scripts/*.sh
+          IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/devops-pipeline-app
+          NEW_TAG=${{ github.sha }}
+          bash scripts/deploy.sh "$IMAGE" "$NEW_TAG"

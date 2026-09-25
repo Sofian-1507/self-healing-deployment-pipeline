@@ -9,6 +9,9 @@ pipeline {
         // the same way the GitHub Actions workflow's deploy job does, since no
         // deployment server is configured for this project.
         PORT = "5060"
+        // Homebrew's Jenkins service runs with a minimal PATH that doesn't include
+        // where Docker Desktop's CLI lives on macOS.
+        PATH = "/usr/local/bin:/opt/homebrew/bin:${env.PATH}"
     }
 
     stages {
